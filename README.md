@@ -1,2 +1,3 @@
 # ig-midia
-Artes temporárias para posts do @brunocostaft via API do Instagram. Apagado depois da publicação.
+Artes e agendamento dos posts do @brunocostaft via API do Instagram (GitHub Actions).
+Credenciais ficam só em Secrets do repositório.

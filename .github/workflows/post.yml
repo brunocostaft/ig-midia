@@ -1,0 +1,57 @@
+name: Post Instagram
+
+# 12:50 UTC = 9:50 em Brasília (o agendamento do GitHub costuma atrasar alguns minutos)
+on:
+  schedule:
+    - cron: "50 12 14 11 *"
+  workflow_dispatch:
+    inputs:
+      modo:
+        description: "validate = testa sem publicar | publish = posta agora"
+        default: validate
+        type: choice
+        options: [validate, publish]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: post-instagram
+  cancel-in-progress: false
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    env:
+      JOB: jobs/2026-11-14-lente-zve10
+      IG_TOKEN: ${{ secrets.IG_TOKEN }}
+      IG_USER_ID: ${{ secrets.IG_USER_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Decide se posta
+        id: decide
+        run: |
+          MODO="${{ github.event.inputs.modo || 'publish' }}"
+          if [ -f "$JOB/PUBLICADO" ]; then echo "Já publicado: $(cat $JOB/PUBLICADO)"; echo "rodar=nao" >> $GITHUB_OUTPUT; exit 0; fi
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            AGORA=$(date -u +%Y%m%d%H%M)
+            # só no dia certo e até 16:00 UTC (13h Brasília)
+            if [ "$AGORA" -lt 202611141250 ] || [ "$AGORA" -gt 202611141600 ]; then echo "Fora da janela ($AGORA UTC)"; echo "rodar=nao" >> $GITHUB_OUTPUT; exit 0; fi
+          fi
+          echo "modo=$MODO" >> $GITHUB_OUTPUT
+          echo "rodar=sim" >> $GITHUB_OUTPUT
+
+      - name: Publicar carrossel
+        if: steps.decide.outputs.rodar == 'sim'
+        run: |
+          python3 ig_post.py carousel "$JOB/urls.txt" --caption-file "$JOB/legenda.txt" --${{ steps.decide.outputs.modo }} | tee saida.txt
+          LINK=$(grep '^PUBLICADO:' saida.txt | cut -d' ' -f2 || true)
+          if [ -n "$LINK" ]; then
+            echo "$LINK" > "$JOB/PUBLICADO"
+            echo "### Publicado: $LINK" >> $GITHUB_STEP_SUMMARY
+            git config user.name "github-actions"; git config user.email "github-actions@users.noreply.github.com"
+            git add "$JOB/PUBLICADO" && git commit -m "Publicado $JOB" && git push
+          else
+            echo "### $(tail -1 saida.txt)" >> $GITHUB_STEP_SUMMARY
+          fi
