@@ -14,6 +14,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 concurrency:
   group: post-instagram
@@ -51,7 +52,8 @@ jobs:
             echo "$LINK" > "$JOB/PUBLICADO"
             echo "### Publicado: $LINK" >> $GITHUB_STEP_SUMMARY
             git config user.name "github-actions"; git config user.email "github-actions@users.noreply.github.com"
-            git add "$JOB/PUBLICADO" && git commit -m "Publicado $JOB" && git push
+            git add "$JOB/PUBLICADO" && git commit -m "Publicado $JOB" && git pull --rebase -q && git push
+            GH_TOKEN=${{ github.token }} gh workflow run painel.yml -R ${{ github.repository }} || true
           else
             echo "### $(tail -1 saida.txt)" >> $GITHUB_STEP_SUMMARY
           fi

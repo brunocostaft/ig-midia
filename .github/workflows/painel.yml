@@ -1,0 +1,31 @@
+name: Atualizar calendário
+
+on:
+  schedule:
+    - cron: "7 * * * *"   # a cada hora
+  workflow_dispatch:
+  push:
+    paths: ["jobs/**", "scripts/**"]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: painel
+  cancel-in-progress: true
+
+jobs:
+  dados:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Gerar docs/dados.json
+        env:
+          IG_TOKEN: ${{ secrets.IG_TOKEN }}
+          IG_USER_ID: ${{ secrets.IG_USER_ID }}
+        run: python3 scripts/gerar_dados.py
+      - name: Salvar se mudou
+        run: |
+          git config user.name "github-actions"; git config user.email "github-actions@users.noreply.github.com"
+          git add docs/dados.json
+          git diff --cached --quiet || (git commit -m "Calendário atualizado" && git pull --rebase -q && git push)
