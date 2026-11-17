@@ -32,6 +32,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: ffmpeg (reels)
+        run: command -v ffprobe >/dev/null || (sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg)
+
       - name: Publicar
         run: |
           JOB="${{ github.event.inputs.job }}"

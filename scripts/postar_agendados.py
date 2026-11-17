@@ -12,10 +12,21 @@ RAIZ = Path(__file__).resolve().parent.parent
 ANTES, DEPOIS = timedelta(minutes=15), timedelta(hours=3)
 
 
+def comando(j, modo):
+    a = json.loads((j / "agenda.json").read_text())
+    if a.get("tipo") == "reel":  # vídeo do repo (upload resumível); validate = simulação do ig_post.py
+        cmd = [sys.executable, str(RAIZ / "ig_post.py"), "reel", str(RAIZ / a["midia_dir"] / a.get("video", "video.mp4")),
+               "--caption-file", str(j / "legenda.txt")]
+        if a.get("thumb_ms") is not None:
+            cmd += ["--thumb-ms", str(a["thumb_ms"])]
+        return cmd + (["--publish"] if modo == "publish" else [])
+    return [sys.executable, str(RAIZ / "ig_post.py"), "carousel", str(j / "urls.txt"),
+            "--caption-file", str(j / "legenda.txt"), f"--{modo}"]
+
+
 def rodar(job, modo):
     j = RAIZ / "jobs" / job
-    r = subprocess.run([sys.executable, str(RAIZ / "ig_post.py"), "carousel", str(j / "urls.txt"),
-                        "--caption-file", str(j / "legenda.txt"), f"--{modo}"], capture_output=True, text=True)
+    r = subprocess.run(comando(j, modo), capture_output=True, text=True)
     print(r.stdout + r.stderr)
     link = next((l.split(" ", 1)[1] for l in r.stdout.splitlines() if l.startswith("PUBLICADO:")), None)
     if modo == "publish" and link:
