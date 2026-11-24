@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Publica os posts agendados em jobs/*/agenda.json que chegaram na hora.
-Regras: publica de 15 min antes até 3 h depois do horário; nunca publica duas vezes (marcador PUBLICADO).
+Regras: publica de 15 min antes até 24 h depois do horário (o cron do GitHub atrasa horas); nunca publica duas vezes (marcador PUBLICADO).
 Uso:  python3 scripts/postar_agendados.py            -> publica o que estiver na hora
       python3 scripts/postar_agendados.py --validate JOB   -> testa um job na API sem publicar
       python3 scripts/postar_agendados.py --publish JOB    -> publica um job agora (manual)"""
@@ -9,7 +9,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parent.parent
-ANTES, DEPOIS = timedelta(minutes=15), timedelta(hours=3)
+ANTES, DEPOIS = timedelta(minutes=15), timedelta(hours=24)
 
 
 def comando(j, modo):
