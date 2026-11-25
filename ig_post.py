@@ -172,12 +172,19 @@ def cmd_reel(a):
         return
 
     tok, ig = env["IG_TOKEN"], env["IG_USER_ID"]
-    params = {"media_type": "REELS", "upload_type": "resumable", "caption": caption,
+    params = {"media_type": "REELS", "caption": caption,
               "share_to_feed": "false" if a.no_feed else "true"}
+    if a.url:  # a Meta baixa o vídeo da URL pública (o upload resumível passou a dar ProcessingFailedError em 25/11/2026)
+        params["video_url"] = a.url
+    else:
+        params["upload_type"] = "resumable"
     if a.thumb_ms is not None:
         params["thumb_offset"] = str(a.thumb_ms)
     c = call("POST", f"{GRAPH}/{ig}/media", tok, data=params)
     cid = c["id"]
+    if a.url:
+        print(f"Container {cid} criado a partir da URL.")
+        return finalizar_reel(cid, tok, ig)
     upload_uri = c.get("uri") or f"https://rupload.facebook.com/ig-api-upload/{API}/{cid}"
     print(f"Container {cid} criado. Enviando {size/1e6:.1f} MB...")
     with open(a.video, "rb") as f:
@@ -186,7 +193,12 @@ def cmd_reel(a):
         "Authorization": f"OAuth {tok}", "offset": "0", "file_size": str(size)})
     if not r.get("success", True):
         sys.exit(f"Upload falhou: {r}")
-    print("Upload ok. Aguardando a Meta processar o vídeo...")
+    print("Upload ok.")
+    return finalizar_reel(cid, tok, ig)
+
+
+def finalizar_reel(cid, tok, ig):
+    print("Aguardando a Meta processar o vídeo...")
     for _ in range(120):  # até ~10 min
         s = call("GET", f"{GRAPH}/{cid}", tok, params={"fields": "status_code,status"})
         code = s.get("status_code")
@@ -283,7 +295,7 @@ def main():
     c = sub.add_parser("check"); c.add_argument("video"); c.set_defaults(fn=cmd_check)
     r = sub.add_parser("reel"); r.add_argument("video")
     r.add_argument("--caption"); r.add_argument("--caption-file")
-    r.add_argument("--thumb-ms", type=int); r.add_argument("--no-feed", action="store_true")
+    r.add_argument("--thumb-ms", type=int); r.add_argument("--url", help="URL pública do vídeo (a Meta baixa)"); r.add_argument("--no-feed", action="store_true")
     r.add_argument("--publish", action="store_true"); r.set_defaults(fn=cmd_reel)
     k = sub.add_parser("carousel"); k.add_argument("urls_file", help="arquivo com 1 URL pública JPEG por linha")
     k.add_argument("--caption"); k.add_argument("--caption-file")

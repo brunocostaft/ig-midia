@@ -9,6 +9,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parent.parent
+RAW = "https://raw.githubusercontent.com/brunocostaft/ig-midia/main"
 ANTES, DEPOIS = timedelta(minutes=15), timedelta(hours=24)
 
 
@@ -16,7 +17,8 @@ def comando(j, modo):
     a = json.loads((j / "agenda.json").read_text())
     if a.get("tipo") == "reel":  # vídeo do repo (upload resumível); validate = simulação do ig_post.py
         cmd = [sys.executable, str(RAIZ / "ig_post.py"), "reel", str(RAIZ / a["midia_dir"] / a.get("video", "video.mp4")),
-               "--caption-file", str(j / "legenda.txt")]
+               "--caption-file", str(j / "legenda.txt"),
+               "--url", f"{RAW}/{a['midia_dir']}/{a.get('video', 'video.mp4')}"]
         if a.get("thumb_ms") is not None:
             cmd += ["--thumb-ms", str(a["thumb_ms"])]
         return cmd + (["--publish"] if modo == "publish" else [])
